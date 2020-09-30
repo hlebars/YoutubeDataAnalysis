@@ -5,10 +5,11 @@ import matplotlib.pyplot as plot
 import numpy as np
 import os
 
-def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData):
+def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime):
 
-    PathToDataOUT=os.path.join("Script","Data","Data_OUT","")
-    NameOfTheFile="TrendingVideoVSTimeForEveryCountry_"+str(IntervalMinute)+"_min"
+    
+    PathToDataOUT=os.path.join("Script","Data","Data_OUT","CSV",LocalToUTCTime,"")
+    NameOfTheFile="TrendingVideoVSTimeForEveryCountry_"+LocalToUTCTime+"_"+str(IntervalMinute)+"_min"
     PathToTheOUTDataFile=os.path.join(PathToDataOUT,NameOfTheFile+".csv")
 
     # If the file doesn't exist it will create it
@@ -21,11 +22,11 @@ def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePl
             #If it is at the beginning of the list of country create an empty DF and then initilized it with the first country data 
             if Country==ListOfCountry[0]:
                 DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.DataFrame()
-                DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting)
+                DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime)
 
             # for every other country it will then merge data that have been generated from the csv in the df created with the first country 
             else:
-                Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting)
+                Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime)
                 DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.merge(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,Df_NewCountryValue, on='Label')
                 
 
@@ -41,14 +42,15 @@ def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePl
             NumberOfVideoTrendingByCountry="Number Of Video "+Country
 
             #get the colunmns name compare it to NumberOfVideoTrendingByCountry if it doesnt match with the list
-            #then PlotBarGraphInFunctionOfTime(Df_TimeAndNumberOfPublication,IntervalMinute,Country,ActivatePloting) return the 
+            #then PlotBarGraphInFunctionOfTime(Df_TimeAndNumberOfPublication,IntervalMinute,Country,ActivatePloting,LocalToUTCTime) return the 
             #dataframe and append it to DF_NumberOfVideoTrendingInFunctionOfTimeByCountry and then plot it et save it
             
-            DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=AppendNewCountryToTheDFofTheResultData(Country,IntervalMinute,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry)
+            DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=AppendNewCountryToTheDFofTheResultData(Country,IntervalMinute,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,LocalToUTCTime)
             
-            PlotNumberOfVideoTrendingInFunctionOfTime(Country,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry)
+            if ActivatePloting==True:
+                PlotNumberOfVideoTrendingInFunctionOfTime(Country,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry)
       
-    DF_NumberOfVideoTrendingInFunctionOfTimeByCountry.to_csv(PathToTheOUTDataFile)
+    DF_NumberOfVideoTrendingInFunctionOfTimeByCountry.to_csv(PathToTheOUTDataFile,index=False)
 
     return DF_NumberOfVideoTrendingInFunctionOfTimeByCountry
 
@@ -56,7 +58,7 @@ def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePl
 
 
 
-def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting):
+def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime):
     """ Plot the bar graph of all the interval and the value inside them in this case the number of video trending for the time of publication """
 
     #get and read the csv of with youtube value
@@ -69,12 +71,14 @@ def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting):
     #get the plublish time and put in the column publish time
     df['publish_time'] = pd.to_datetime(df['publish_time'], format='%Y-%m-%dT%H:%M:%S.%fZ')
     
+    #Converting LOcal time to UTC time if LocalToUTCTime==True
+    df=ConvertLocalTimeToUTC(df,Country,LocalToUTCTime)
+
+    #insert publish date in the corresponding columns
     df.insert(5, 'publish_date', df['publish_time'].dt.date)
 
-    #convert them into datetime time 
+    # convert them into datetime time 
     df['publish_time'] = df['publish_time'].dt.time
-    
-
 
     #convert the trending date string into a datetime format
     df['trending_date'] = pd.to_datetime(df['trending_date'], format='%y.%d.%m')
@@ -185,9 +189,9 @@ def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting):
 def GetDFDataFromCountryCSV(Country):
 
     PathToInputData=os.path.join("Script","Data","Data_IN","Youtube_CSV__And_JSON",Country+"videos.csv")
-    if Country=="RU" or Country=="KR" or Country=="MX":
+    if Country=="RUS" or Country=="KOR" or Country=="MEX":
         df=pd.read_csv(PathToInputData,engine="python")
-    elif Country=="JP":
+    elif Country=="JPN":
         PathToInputData=os.path.join("Script","Data","Data_IN","Youtube_CSV__And_JSON",Country+"videos - Copie.csv")
         df=pd.read_csv(PathToInputData,engine="python", error_bad_lines=False, delimiter=";")
     else:
@@ -196,11 +200,11 @@ def GetDFDataFromCountryCSV(Country):
     return df
 
 
-def AppendNewCountryToTheDFofTheResultData(Country,IntervalMinute,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry):
+def AppendNewCountryToTheDFofTheResultData(Country,IntervalMinute,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,LocalToUTCTime):
     if NumberOfVideoTrendingByCountry not in sorted(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry):
         #Desactivate Plotting because it will be shown after adding it to the DF_NumberOfVideoTrendingInFunctionOfTimeByCountry 
         ActivatePloting=False
-        Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting)
+        Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime)
         DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.merge(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,Df_NewCountryValue, on='Label')
 
     return DF_NumberOfVideoTrendingInFunctionOfTimeByCountry
@@ -223,4 +227,30 @@ def PlotNumberOfVideoTrendingInFunctionOfTime(Country,NumberOfVideoTrendingByCou
     #show the graph
     plot.show()
 
-            
+
+def ConvertLocalTimeToUTC(df,Country,LocalToUTCTime):
+    
+    if LocalToUTCTime=="Local":
+        if Country=="USA":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('US/Central')
+        elif Country=="MEX":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('America/Mexico_City')
+        elif Country=="FRA":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Europe/Paris')
+        elif Country=="DEU":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Europe/Berlin')
+        elif Country=="GBR":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Europe/London')
+        elif Country=="IND":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Asia/Kolkata')
+        elif Country=="CAN":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('America/Winnipeg')
+        elif Country=="KOR":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Asia/Seoul')
+        elif Country=="RUS":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Asia/Krasnoyarsk')
+        elif Country=="JPN":
+            df['publish_time']=pd.DatetimeIndex(df['publish_time']).tz_localize('utc').tz_convert('Asia/Tokyo')
+        
+
+    return df
