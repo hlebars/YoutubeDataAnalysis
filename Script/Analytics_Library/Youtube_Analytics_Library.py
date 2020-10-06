@@ -4,12 +4,86 @@ import matplotlib as mlp
 import matplotlib.pyplot as plot
 import numpy as np
 import os
+import geopandas as gpd
+import imageio
+import time
 
-def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime):
+def PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime,TotalTimeGIF,DayOfTheWeek):
+
+    PathToDataOUT_JPG=os.path.join("Script","Data","Data_OUT","JPG",LocalToUTCTime,DayOfTheWeek,str(IntervalMinute),"")
+    if not os.path.exists(PathToDataOUT_JPG):
+        os.makedirs(PathToDataOUT_JPG)
+    PathToDataOUT_GIF=os.path.join("Script","Data","Data_OUT","GIF",LocalToUTCTime,DayOfTheWeek,"")
+    PathToGeoJSONInputData=os.path.join("Script","Data","Data_IN","GeoJSON","ref-countries-2020-60m.geojson","CNTR_RG_60M_2020_3857.geojson")
+
+    world = gpd.read_file(PathToGeoJSONInputData)
+    world=world[world.NAME_ENGL!="Antarctica"]
+
+    DataDf=CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime,DayOfTheWeek)
+
+    DataDf.set_index("Label",inplace=True)
+
+    MaxValueOfTheTimeEC=max(DataDf.max())
+        
+    DataDf=DataDf.transpose()
+
+    for i in DataDf.index:
+        DataDf.loc[i,"ISO3_CODE"]=i.split()[-1]
+
+    DataWorld=world.merge(DataDf, on="ISO3_CODE")
+    start = time.time()
+    images = []
+    for Time in sorted(DataDf):
+        if Time!="Label" and Time!="ISO3_CODE":
+
+            # MaxValueOfTheTime=DataDf[Time].max()
+            # DataDf[index]=DataDf[index]/MaxValueOfTheTime
+
+
+            Title="Number of Video Trending published a " +DayOfTheWeek +" at: "+Time+" "+LocalToUTCTime+" Time "
+            WorldBase=world.plot(color="lightgrey")
+            DataWorld.plot(column=Time,ax=WorldBase, legend=True,vmin=0,vmax=MaxValueOfTheTimeEC,cmap='OrRd',legend_kwds={'label': "Number of Video published By Country",'orientation': "horizontal"})
+            
+            plot.title(Title)
+            plot.gca().axes.get_yaxis().set_visible(False)
+            plot.gca().axes.get_xaxis().set_visible(False)
+            # plot.show()
+            HoursAndMin=Time.split(":")
+            JPGTimeStringName=str(HoursAndMin[0])+"h"+str(HoursAndMin[1])+"min"+".png"
+            PathToTheOUTDataFile=os.path.join(PathToDataOUT_JPG,JPGTimeStringName)
+
+            plot.savefig(PathToTheOUTDataFile,dpi=50,format="png")
+            plot.close()
+            # images.append(imageio.imread(PathToTheOUTDataFile))
+    
+    
 
     
-    PathToDataOUT=os.path.join("Script","Data","Data_OUT","CSV",LocalToUTCTime,"")
-    NameOfTheFile="TrendingVideoVSTimeForEveryCountry_"+LocalToUTCTime+"_"+str(IntervalMinute)+"_min"
+    filenames=[os.path.join(PathToDataOUT_JPG,x) for x in os.listdir(PathToDataOUT_JPG)]
+    
+    NameOfTheGIFFile="Number of Video Trending in the world published a " +DayOfTheWeek + LocalToUTCTime+" Time "+str(IntervalMinute)+".gif"
+    PathToTheOUTDataFile=os.path.join(PathToDataOUT_GIF,NameOfTheGIFFile)   
+
+    with imageio.get_writer(PathToTheOUTDataFile, mode='I',duration=0.5) as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+
+    end = time.time()
+
+    print("Temps pour creer gif at " +str(IntervalMinute)+" is "+str(end - start))
+
+    # GIFTimeByFrame=TotalTimeGIF/len(images)
+    # imageio.mimsave(PathToTheOUTDataFile, images,duration=0.5)
+
+
+
+
+def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime,DayOfTheWeek):
+
+    
+    PathToDataOUT=os.path.join("Script","Data","Data_OUT","CSV",LocalToUTCTime,DayOfTheWeek,"")
+    NameOfTheFile="TrendingVideoVSTimeForEveryCountry_"+LocalToUTCTime+"_"+DayOfTheWeek+"_"+str(IntervalMinute)+"_min"
     PathToTheOUTDataFile=os.path.join(PathToDataOUT,NameOfTheFile+".csv")
 
     # If the file doesn't exist it will create it
@@ -19,14 +93,15 @@ def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePl
             
             
             
+            
             #If it is at the beginning of the list of country create an empty DF and then initilized it with the first country data 
             if Country==ListOfCountry[0]:
                 DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.DataFrame()
-                DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime)
+                DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek)
 
             # for every other country it will then merge data that have been generated from the csv in the df created with the first country 
             else:
-                Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime)
+                Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek)
                 DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.merge(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,Df_NewCountryValue, on='Label')
                 
 
@@ -42,23 +117,54 @@ def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePl
             NumberOfVideoTrendingByCountry="Number Of Video "+Country
 
             #get the colunmns name compare it to NumberOfVideoTrendingByCountry if it doesnt match with the list
-            #then PlotBarGraphInFunctionOfTime(Df_TimeAndNumberOfPublication,IntervalMinute,Country,ActivatePloting,LocalToUTCTime) return the 
+            #then PlotBarGraphInFunctionOfTime(Df_TimeAndNumberOfPublication,IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek) return the 
             #dataframe and append it to DF_NumberOfVideoTrendingInFunctionOfTimeByCountry and then plot it et save it
             
             DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=AppendNewCountryToTheDFofTheResultData(Country,IntervalMinute,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,LocalToUTCTime)
             
             if ActivatePloting==True:
-                PlotNumberOfVideoTrendingInFunctionOfTime(Country,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry)
+                PlotNumberOfVideoTrendingInFunctionOfTime(Country,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,DayOfTheWeek)
       
     DF_NumberOfVideoTrendingInFunctionOfTimeByCountry.to_csv(PathToTheOUTDataFile,index=False)
 
     return DF_NumberOfVideoTrendingInFunctionOfTimeByCountry
 
 
+def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek):
+    """ Plot the bar graph of all the interval and the value inside them in this case the number of video trending for the time of publication """
+
+    #get and read the csv of with youtube value
+    df=GetDFDataFromCountryCSV(Country)
+    
+    #all the headers of all the columns of every file
+    # Df_Header=[video_id,trending_date,title,channel_title,category_id,publish_time,tags,views,likes,dislikes,comment_count,thumbnail_link,comments_disabled,ratings_disabled,video_error_or_removed,description]
+    df=df.drop(columns=['video_id','title','channel_title','category_id','tags','thumbnail_link','comments_disabled','ratings_disabled','video_error_or_removed','description'])
+    
+    #get the plublish time and put in the column publish time
+    df['publish_time'] = pd.to_datetime(df['publish_time'], format='%Y-%m-%dT%H:%M:%S.%fZ')
+    
+    #Converting LOcal time to UTC time if LocalToUTCTime==True
+    df=ConvertLocalTimeToUTC(df,Country,LocalToUTCTime)
+
+    df_NumberHours=NumberOfVideoFilterByPublishTime(df,Country,IntervalMinute)
+    
+
+    # #Get all time data in function of the day of the week if DayOfTheWeek=="All" skip this to have all day of the dataframe
+    # df["weekday_publish_date"] = df["publish_date"].dt.day_name()
+    # df=GetDFFromWeekDay(df,DayOfTheWeek)
 
 
+    #if ActivatePloting== true plot the graph else no graph
+    if ActivatePloting==True:
+        #Put the time center value of interval generated in the beginning of this function to be shown 
+        # without second value because it is more beautiful on the bar graph
 
-def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime):
+        PlotNumberOfVideoTrendingInFunctionOfTime(Country,df_NumberHours,DayOfTheWeek)
+
+    return df_NumberHours
+
+
+def PlotBarGraphInFunctionOfTimeOld(IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek):
     """ Plot the bar graph of all the interval and the value inside them in this case the number of video trending for the time of publication """
 
     #get and read the csv of with youtube value
@@ -87,6 +193,14 @@ def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToU
     # get the time before trending
     df["trending_date"]=df["trending_date"].values.astype('datetime64[D]')
     df["publish_date"]=df["publish_date"].values.astype('datetime64[D]')
+
+
+    #Get all time data in function of the day of the week if DayOfTheWeek=="All" skip this to have all day of the dataframe
+    df["weekday_publish_date"] = df["publish_date"].dt.day_name()
+    df=GetDFFromWeekDay(df,DayOfTheWeek)
+    
+
+
 
     # get the time before trending
     df["Time_Before_Trending"]=df["trending_date"].sub(df["publish_date"],axis=0)
@@ -182,7 +296,7 @@ def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToU
         #Put the time center value of interval generated in the beginning of this function to be shown 
         # without second value because it is more beautiful on the bar graph
 
-        PlotNumberOfVideoTrendingInFunctionOfTime(Country,NumberOfVideoTrendingByCountry,df_NumberHours)
+        PlotNumberOfVideoTrendingInFunctionOfTime(Country,df_NumberHours,DayOfTheWeek)
 
     return df_NumberHours
 
@@ -204,19 +318,20 @@ def AppendNewCountryToTheDFofTheResultData(Country,IntervalMinute,NumberOfVideoT
     if NumberOfVideoTrendingByCountry not in sorted(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry):
         #Desactivate Plotting because it will be shown after adding it to the DF_NumberOfVideoTrendingInFunctionOfTimeByCountry 
         ActivatePloting=False
-        Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime)
+        Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek)
         DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.merge(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,Df_NewCountryValue, on='Label')
 
     return DF_NumberOfVideoTrendingInFunctionOfTimeByCountry
 
-def PlotNumberOfVideoTrendingInFunctionOfTime(Country,NumberOfVideoTrendingByCountry,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry):
+def PlotNumberOfVideoTrendingInFunctionOfTime(Country,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,DayOfTheWeek):
 
+    NumberOfVideoTrendingByCountry="Number Of Video "+Country
     # Create the bar graph with in x axis Label ("HH:MM") and NumberOfVideoTrendingByCountry in y axis
     DF_NumberOfVideoTrendingInFunctionOfTimeByCountry.plot(x="Label",y=NumberOfVideoTrendingByCountry, kind='bar')
     
 
     #title of the plot
-    plot.title("Number of Video Trending in " +Country +" by publication time")
+    plot.title("Number of Video Trending a "+DayOfTheWeek+" in " +Country +" by publication time")
 
     #title of the x axis of the plot
     plot.xlabel('Time')
@@ -254,3 +369,36 @@ def ConvertLocalTimeToUTC(df,Country,LocalToUTCTime):
         
 
     return df
+
+def GetDFFromWeekDay(df,DayOfTheWeek):
+
+    if DayOfTheWeek!="All":
+        
+        df=df[df.weekday_publish_date==DayOfTheWeek]
+
+    return df
+
+def NumberOfVideoFilterByPublishTime(df,Country,IntervalMinute):
+
+
+    df.set_index( df['publish_time'], inplace=True)
+    counttotal=0
+    countindex=0
+    # IntervalMinute=1/60
+    HoursForLabels=pd.date_range('00:00:00', '23:59:59',freq=str(IntervalMinute)+'T').strftime('%H:%M:%S').tolist()
+
+    NumberOfVideoTrendingByCountry="Number Of Video "+Country
+    df_NumberHours=pd.DataFrame(0,index=HoursForLabels,columns=["Label",NumberOfVideoTrendingByCountry])
+    df_NumberHours["Label"]=HoursForLabels
+
+
+    start = time.time()
+    for index in range(len(HoursForLabels)):
+        if index<(len(HoursForLabels)-1):
+            df_NumberHours.loc[HoursForLabels[index],NumberOfVideoTrendingByCountry]=df["views"].between_time(start_time=HoursForLabels[index],end_time=HoursForLabels[index+1],include_end=False).count()
+        else:
+            df_NumberHours.loc[HoursForLabels[index],NumberOfVideoTrendingByCountry]=df["views"].between_time(start_time=HoursForLabels[index],end_time="23:59:59",include_start=True,include_end=True).count()
+    end = time.time()
+
+    print("Temps pour categoriser at" +str(IntervalMinute)+" is "+str(end - start))
+    return df_NumberHours

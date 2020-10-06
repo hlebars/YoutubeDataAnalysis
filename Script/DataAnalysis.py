@@ -7,83 +7,88 @@ import numpy as np
 from Analytics_Library import Youtube_Analytics_Library as YAL
 import geopandas as gpd
 import imageio
+import time
 
 
-ListOfCountry=["JPN","RUS","KOR","MEX","CAN","DEU","FRA","GBR","IND","USA"]
-ListOfIntervalMinute=[30,20,10,4,2]
-ListOfTimeZone=["Local","UTC"]
-ActivatePloting=False
-ForceRenderingData=False
-# LocalToUTCTime="UTC"
+def functionatimer():
+
+    ListOfCountry=["JPN","RUS","KOR","MEX","CAN","DEU","FRA","GBR","IND","USA"]
+    ListOfIntervalMinute=[30,20,10,4,2]
+    ListOfTimeZone=["Local","UTC"]
+    ActivatePloting=False
+    ForceRenderingData=True
+    TotalTimeGIF=10
+    WeekDays = ["Monday"]#,"Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+    for DayOfTheWeek in WeekDays:
+        for IntervalMinute in ListOfIntervalMinute:
+            for TimeZone in ListOfTimeZone:
+                YAL.PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,TimeZone,TotalTimeGIF,DayOfTheWeek)
+            print("Interval: "+str(IntervalMinute)+" done !")
+        print(DayOfTheWeek+" done !")
 
 
+start = time.time()
 
+functionatimer()
 
+end = time.time()
 
-
-def PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime):
-
-    PathToDataOUT_JPG=os.path.join("Script","Data","Data_OUT","JPG",LocalToUTCTime,"")
-    PathToDataOUT_GIF=os.path.join("Script","Data","Data_OUT","GIF",LocalToUTCTime,"")
-    PathToGeoJSONInputData=os.path.join("Script","Data","Data_IN","GeoJSON","ref-countries-2020-60m.geojson","CNTR_RG_60M_2020_3857.geojson")
-    world = gpd.read_file(PathToGeoJSONInputData)
-    world=world[world.NAME_ENGL!="Antarctica"]
-
-    DataDf=YAL.CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime)
-
-    DataDf.set_index("Label",inplace=True)
-
-    MaxValueOfTheTimeEC=max(DataDf.max())
-        
-    DataDf=DataDf.transpose()
-
-    for i in DataDf.index:
-        DataDf.loc[i,"ISO3_CODE"]=i.split()[-1]
-
-    DataWorld=world.merge(DataDf, on="ISO3_CODE")
-    
-    images = []
-    for Time in sorted(DataDf):
-        if Time!="Label" and Time!="ISO3_CODE":
-
-            # MaxValueOfTheTime=DataDf[Time].max()
-            # DataDf[index]=DataDf[index]/MaxValueOfTheTime
-
-
-            Title="Number of Video Trending in the world published at: "+LocalToUTCTime+" Time "+Time
-            WorldBase=world.plot(color="lightgrey")
-            DataWorld.plot(column=Time,ax=WorldBase, legend=True,vmin=0,vmax=MaxValueOfTheTimeEC,cmap='OrRd',legend_kwds={'label': "Number of Video published By Country",'orientation': "horizontal"})
-            
-            plot.title(Title)
-            plot.gca().axes.get_yaxis().set_visible(False)
-            plot.gca().axes.get_xaxis().set_visible(False)
-            # plot.show()
-            
-            PathToTheOUTDataFile=os.path.join(PathToDataOUT_JPG,str(Time)+".jpg")
-
-            plot.savefig(PathToTheOUTDataFile)
-            plot.close()
-            images.append(imageio.imread(PathToTheOUTDataFile))
-
-
-
-
-    if LocalToUTCTime=="Local": 
-        PathToTheOUTDataFile=os.path.join(PathToDataOUT_GIF,"Number of Video Trending in the world "+"Local Time "+str(IntervalMinute)+".gif")   
-    else:
-        PathToTheOUTDataFile=os.path.join(PathToDataOUT_GIF,"Number of Video Trending in the world "+"UTC Time "+str(IntervalMinute)+".gif")   
-    imageio.mimsave(PathToTheOUTDataFile, images,duration=0.5)
-
-
-for IntervalMinute in ListOfIntervalMinute:
-    for TimeZone in ListOfTimeZone:
-        PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
-    print("Interval: "+str(IntervalMinute)+" done !")
+print(end - start)
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+# a retravailler
+# def ChooseTypeOfDataToBePlotted(DataToBePLotted,ListOfIntervalMinute,ActivatePloting,ForceRenderingData):
+
+#     ListOfCountry=["JPN","RUS","KOR","MEX","CAN","DEU","FRA","GBR","IND","USA"]
+#     ListOfTimeZone=["Local","UTC"]
+
+#     if DataToBePLotted=="WorldEveryTimeZoneEveryInterval":
+#         for IntervalMinute in ListOfIntervalMinute:
+#             for TimeZone in ListOfTimeZone:
+#                 PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
+#             print("Interval: "+str(IntervalMinute)+" done !")
+
+#     elif DataToBePLotted=="WorldUTCOneInterval":
+#         TimeZone=ListOfTimeZone[1]
+#         PlotPublicationOfVideoByTimeMAP(ListOfCountry,ListOfIntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
+
+#     elif DataToBePLotted=="WorldLocalOneInterval":
+#         TimeZone=ListOfTimeZone[0]
+#         PlotPublicationOfVideoByTimeMAP(ListOfCountry,ListOfIntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
+
+#     elif DataToBePLotted=="WorldEveryTimeZoneOneInterval":
+#         for TimeZone in ListOfTimeZone:
+#                 PlotPublicationOfVideoByTimeMAP(ListOfCountry,ListOfIntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
+
+#     elif DataToBePLotted=="WorldUTCEveryInterval":
+#         TimeZone=ListOfTimeZone[1]
+#         for IntervalMinute in ListOfIntervalMinute:
+#                 PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
+
+#     elif DataToBePLotted=="WorldLocalEveryInterval":
+#         TimeZone=ListOfTimeZone[0]
+#         for IntervalMinute in ListOfIntervalMinute:
+#                 PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,TimeZone)
+# ChooseTypeOfDataToBePlotted(ListOfPlottedChoice[0],ListOfIntervalMinute,ActivatePloting,ForceRenderingData)
+
+# Insert the polygon into 'geometry' -column at index 0
+# In [22]: newdata.loc[0, 'geometry'] = poly
+
+
+# world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
 #time normalise for every country
 # for index in sorted(DataDf):
     
