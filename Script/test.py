@@ -21,17 +21,17 @@ def testtemps():
 
     # print(df_NumberHours["Label"].head(3))
 
-    Country="MEX"
+    Country="FRA"
     PathToInputData=os.path.join("Script","Data","Data_IN","Youtube_CSV__And_JSON",Country+"videos.csv")
 
         
 
 
-    df=pd.read_csv(PathToInputData,engine="python") 
+    df=pd.read_csv(PathToInputData)#,engine="python") 
 
+    #'video_id','title',
 
-
-    df=df.drop(columns=['video_id','title','channel_title','category_id','tags','thumbnail_link','comments_disabled','ratings_disabled','video_error_or_removed','description'])
+    df=df.drop(columns=['channel_title','category_id','tags','thumbnail_link','comments_disabled','ratings_disabled','video_error_or_removed','description'])
 
     #get the plublish time and put in the column publish time
     df['publish_time'] = pd.to_datetime(df['publish_time'], format='%Y-%m-%dT%H:%M:%S.%fZ')
@@ -68,13 +68,215 @@ def testtemps():
 
     # filtertime=(df[df.index.time > datetime.time(12),] & df[df.index.time < datetime.time(13)])
 
+   #Converting LOcal time to UTC time if LocalToUTCTime==True
+    # df=ConvertLocalTimeToUTC(df,Country,LocalToUTCTime)
+    print(df["video_id"].nunique())
+    df = df.drop_duplicates(subset = 'video_id', keep = 'first')
+    print(df)
+    df.set_index( df['publish_time'], inplace=True)
+    # df_FiltResult=
+    
+    # df=df.groupby([df.index.day_name()],)["views"].count()#,df.index.hour
+
+    # df.plot(kind="bar")
+    # plot.show()
+
+
+    # filt=(df.title.str.find(sub)!=-1)
+    # filt=None
+    # df_FiltResult=df["title"].resample("D")
+    #juste le filtre 
+    # df_FiltResultsample=df["title"][filt].resample("M").count()
+    # totalite de la periode 
+    
+    # sub=""
+    #fictionnary of group by possibilities
+    DicoGroubyPossibility={
+        "Y":df.index.year,
+        "M":df.index.month,
+        "W":df.index.week,
+        "D":df.index.day,
+        "h":df.index.hour,
+        "m":df.index.minute,
+        "s":df.index.second,
+        "time":df.index.time,
+        "date":df.index.date,
+        "WeekDay":df.index.weekday,
+        }
+    ListOfDateAndTime=["WeekDay"]#,"h"]#,"M","D"]
+
+    #test if the list contain more than one parameter for grouby if it is true then it will group by by the composant o the list
+    if len(ListOfDateAndTime)>1:
+
+        
+        
+        
+        #Create empty list for date and time classification
+        ListOfDate=[]
+        ListOfTime=[]
+
+        #Classify Date and time in the corresponding list in fucntion of it is in upper case or not upper=date  low=time
+        for i in ListOfDateAndTime:
+            if i.isupper() or i=="date" or i=="WeekDay":
+                ListOfDate.append(i)
+            else:
+                ListOfTime.append(i)
+
+            #get the list of all indexes  
+            SegmentOfDateOrTime=DicoGroubyPossibility[i].astype(str).tolist()
+
+            # and add a zero in front of the index string to have 00 h and not 0h or days etc 
+            for DateOrTime in range(len(SegmentOfDateOrTime)):
+                if len(SegmentOfDateOrTime[DateOrTime])==1:
+                    SegmentOfDateOrTime[DateOrTime]=str(0)+SegmentOfDateOrTime[DateOrTime]
+            
+            #Place it back in the columns of the date or time correspondant like Y(Year) or h(hour) to get a series grouby with different name
+            df.loc[:,i]=SegmentOfDateOrTime
+
+
+        #grouby in function of the entry in the list of date and time   
+        df=df.groupby(ListOfDateAndTime)["views"].count()
+
+        #Go from pd series to dataframe with another index
+        df=df.to_frame(name = 'Number Of Video Trending').reset_index()
+        
+        if "WeekDay" in ListOfDateAndTime:
+            dayOfWeek={"00":'Monday', "01":'Tuesday', "02":'Wednesday', "03":'Thursday', "04":'Friday', "05":'Saturday', "06":'Sunday'}
+            df['WeekDay'] = df['WeekDay'].map(dayOfWeek)
+
+        #create the columns time in function of the date and time in listoftime
+        if len(ListOfDate)>0 and len(ListOfTime)>0:
+            df['Time'] = df[ListOfDate].astype(str).agg('-'.join, axis=1)+" "+df[ListOfTime].astype(str).agg(':'.join, axis=1)
+        elif len(ListOfDate)>0 and len(ListOfTime)==0:
+            df['Time'] = df[ListOfDate].astype(str).agg('-'.join, axis=1)
+        elif len(ListOfDate)==0 and len(ListOfTime)>0:
+            df['Time'] = df[ListOfTime].astype(str).agg(':'.join, axis=1)
+        
+        #Put the column Time in index
+        df.set_index( df['Time'], inplace=True)
+
+        #add the column Time to ListOfDateAndTime before dropping every columns of ListOfDateAndTime to have a nice dataframe with just the number
+        #of videos trending and the time index
+        ListOfDateAndTime.append('Time')
+        df=df.drop(ListOfDateAndTime,axis=1)
+
+    else:
+        #if their is only one thing in the list
+
+
+        #get the list of all indexes  
+        SegmentOfDateOrTime=DicoGroubyPossibility[ListOfDateAndTime[0]].astype(str).tolist()
+
+        # and add a zero in front of the index string to have 00 h and not 0h or days etc 
+        for DateOrTime in range(len(SegmentOfDateOrTime)):
+            if len(SegmentOfDateOrTime[DateOrTime])==1:
+                SegmentOfDateOrTime[DateOrTime]=str(0)+SegmentOfDateOrTime[DateOrTime]
+
+        #grouby in function of the entry in the list of index  
+        df=df.groupby(SegmentOfDateOrTime)["views"].count()
+
+        #Create a dataframe with the grouby serie
+        df=df.to_frame(name = 'Number Of Video Trending')#.reset_index()
+
+        # Rename the dataframe index in Time
+        df.index=df.index.rename('Time')
+
+    
+    
+    # df1.columns=ListOfDateAndTime.split("_")
+    # df1=df1.to_frame(name = 'count').reset_index()
+    
+    # df=df.loc[:,ListOfTime].join()
+ 
+
+
+
+
+    # df=df.resample("60T").views.count()#, df.index.minute df.index.hour
+    # df=df.groupby(pd.Grouper(key='publish_time',freq='30T')).views.count()#, df.index.minute df.index.hour
+    # df=df.groupby([df.index.second]).views.count()#df.index.hour,
+    # df=df.groupby([df.index.hour,df.index.minute,df.index.second]).views.count()
+    # df=df.groupby([df.index.year,df.index.month,df.index.day,df.index.hour,df.index.minute,df.index.second]).views.count()
+    # print(df)
+    df.plot(kind="bar")
+
+    plot.show()
+    
+    # df_FiltResult=df["views"].resample("H").count()
+    # print(df_FiltResult)
+    FindText=" !"
+    filtre="Minute"
+    NumberOfVideoTrendingByCountry="Number Of Video "+Country
+    DicoResampleAndGraph={"Year":("Y","%y"),"Month":("M","%y/%m"),"Day":("D","%y/%m/%d"),"Hour":("H","%y/%m/%d %H"),"Minute":("m","%y/%m/%d %H:%m")}
+    # filt=(df.index.year==2017) | (df.index.year==2018)
+    filt=(df.index.month==12) | (df.index.day==25)
+    df=df[filt]
+    if FindText!="":
+        df["result"]=df["title"].apply(lambda x: 1 if x.find(FindText)!=-1 else 0)
+        df_FiltResult=df["result"].resample(DicoResampleAndGraph[filtre][0]).sum()
+        
+    else:
+        df_FiltResult=df["views"].resample(DicoResampleAndGraph[filtre][0]).count()
+    df_FiltResult.columns=["Label",NumberOfVideoTrendingByCountry]
+    df_FiltResult.index=df_FiltResult.index.strftime(DicoResampleAndGraph[filtre][1])#-%d
+
+    # df_FiltResult.index=df_FiltResult.index.strftime("%V")#-%d
+    # print(df_FiltResult.index)
+    # filt=(df.title.str.find(sub)!=-1)
+    # df_FiltResult=df["title"][filt].resample("W").count()
+    # df_FiltResult=df["title"].resample("W").count()
+    # df_FiltResult.index=df_FiltResult.index.strftime("%V")#-%d
+    print(df_FiltResult)
+    
+       # if df
+    # df_FiltResult.loc["value"]=df["title"][filt].count()
+    # df.index=pd.to_datetime(df.index,format='%Y-%m-%d')
+    # df_FiltResultsample.plot(y=0,kind="bar")
+    df_FiltResult.plot(y=0,kind="bar")
+    plot.show()
+    NumberOfVideoTrendingByCountry="Number Of Video "+Country
+    Months=["January","February","March","April","May","June","July","August","October","November","December"]
+    Years=[]
+    for Year in range(min(df.publish_time.dt.year),max(df.publish_time.dt.year)+1):
+        Years.append(Year)
+    df_VideoCountForDayOfTheWeek=pd.DataFrame(0,index=Years,columns=[NumberOfVideoTrendingByCountry])
+    print(min(df.publish_time.dt.year))
+    print(max(df.publish_time.dt.year))
+    sub=" Noël "
+    for Year in Years:
+        filtervalue=(df.publish_time.dt.year==Year) & (df.title.str.find(sub)!=-1)
+        df_VideoCountForDayOfTheWeek.loc[Year,NumberOfVideoTrendingByCountry]=max(df[filtervalue].count())
+    print(df_VideoCountForDayOfTheWeek)
+    WeekDays=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+    df_VideoCountForDayOfTheWeek=pd.DataFrame(0,index=WeekDays,columns=["Number Of Videos"])
+    for WeekDay in WeekDays:
+        df_VideoCountForDayOfTheWeek.loc[WeekDay,"Number Of Videos"]=max(df[df.publish_time.dt.day_name()==WeekDay].count())
+    print(df_VideoCountForDayOfTheWeek)
+
+    df_VideoCountForDayOfTheWeek.plot(y="Number Of Videos",kind="bar")
+    plot.show()
+    #insert publish date in the corresponding columns
+    df.insert(5, 'publish_date', df['publish_time'].dt.date)
+
+    # convert them into datetime time 
+    df['publish_time'] = df['publish_time'].dt.time
+
+    #convert the trending date string into a datetime format
+    df['trending_date'] = pd.to_datetime(df['trending_date'], format='%y.%d.%m')
+
+    #Put the trending date in the same format before soustracting them to 
+    # get the time before trending
+    df["trending_date"]=df["trending_date"].values.astype('datetime64[D]')
+    df["publish_date"]=df["publish_date"].values.astype('datetime64[D]')
+
+
 
     # functionning from 1 s tp 24h 
     IntervalMinute=1/60
 
     if IntervalMinute==1/60:
 
-        df.set_index( df['publish_time'], inplace=True)
+        
         counttotal=0
         countindex=0
         

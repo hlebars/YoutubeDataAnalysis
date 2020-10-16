@@ -8,6 +8,8 @@ import geopandas as gpd
 import imageio
 import time
 
+
+###################################################################    GeoJSON   ################################################################
 def PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime,TotalTimeGIF,DayOfTheWeek):
 
     PathToDataOUT_JPG=os.path.join("Script","Data","Data_OUT","JPG",LocalToUTCTime,DayOfTheWeek,str(IntervalMinute),"")
@@ -56,12 +58,17 @@ def PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting
             plot.close()
             # images.append(imageio.imread(PathToTheOUTDataFile))
     
-    
+    NameOfTheGIFFile="Number of Video Trending in the world published a " +DayOfTheWeek + LocalToUTCTime+" Time "+str(IntervalMinute)+".gif"
+    CreateGIF(PathToDataOUT_JPG,PathToDataOUT_GIF,NameOfTheGIFFile)
 
+
+################################################################### Creation of GIF ###########################################################
+
+def CreateGIF(PathToDataOUT_JPG,PathToDataOUT_GIF,NameOfTheGIFFile):
     
     filenames=[os.path.join(PathToDataOUT_JPG,x) for x in os.listdir(PathToDataOUT_JPG)]
     
-    NameOfTheGIFFile="Number of Video Trending in the world published a " +DayOfTheWeek + LocalToUTCTime+" Time "+str(IntervalMinute)+".gif"
+    start = time.time()
     PathToTheOUTDataFile=os.path.join(PathToDataOUT_GIF,NameOfTheGIFFile)   
 
     with imageio.get_writer(PathToTheOUTDataFile, mode='I',duration=0.5) as writer:
@@ -71,13 +78,13 @@ def PlotPublicationOfVideoByTimeMAP(ListOfCountry,IntervalMinute,ActivatePloting
 
     end = time.time()
 
-    print("Temps pour creer gif at " +str(IntervalMinute)+" is "+str(end - start))
+    print("Temps pour creer gif  is "+str(end - start))#at " +str(IntervalMinute)+"
 
     # GIFTimeByFrame=TotalTimeGIF/len(images)
     # imageio.mimsave(PathToTheOUTDataFile, images,duration=0.5)
 
 
-
+#################################################### Creation of Plot ########################################################################
 
 def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePloting,ForceRenderingData,LocalToUTCTime,DayOfTheWeek):
 
@@ -103,11 +110,6 @@ def CreateAndOrPlotTimeVsNumberOfVideoDF(ListOfCountry,IntervalMinute,ActivatePl
             else:
                 Df_NewCountryValue=PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToUTCTime,DayOfTheWeek)
                 DF_NumberOfVideoTrendingInFunctionOfTimeByCountry=pd.merge(DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,Df_NewCountryValue, on='Label')
-                
-
-        
-
-        
 
     else:
         #If the file PathToTheOUTDataFile exist then load the data andd plot them to a graph
@@ -148,7 +150,7 @@ def PlotBarGraphInFunctionOfTime(IntervalMinute,Country,ActivatePloting,LocalToU
 
     df_NumberHours=NumberOfVideoFilterByPublishTime(df,Country,IntervalMinute)
     
-
+    
     # #Get all time data in function of the day of the week if DayOfTheWeek=="All" skip this to have all day of the dataframe
     # df["weekday_publish_date"] = df["publish_date"].dt.day_name()
     # df=GetDFFromWeekDay(df,DayOfTheWeek)
@@ -298,8 +300,6 @@ def PlotBarGraphInFunctionOfTimeOld(IntervalMinute,Country,ActivatePloting,Local
 
         PlotNumberOfVideoTrendingInFunctionOfTime(Country,df_NumberHours,DayOfTheWeek)
 
-    return df_NumberHours
-
 def GetDFDataFromCountryCSV(Country):
 
     PathToInputData=os.path.join("Script","Data","Data_IN","Youtube_CSV__And_JSON",Country+"videos.csv")
@@ -342,6 +342,25 @@ def PlotNumberOfVideoTrendingInFunctionOfTime(Country,DF_NumberOfVideoTrendingIn
     #show the graph
     plot.show()
 
+
+def PlotNumberOfVideoTrendingInFunctionOfWeekDay(Country,DF_NumberOfVideoTrendingInFunctionOfTimeByCountry,DayOfTheWeek):
+
+    NumberOfVideoTrendingByCountry="Number Of Video "+Country
+    # Create the bar graph with in x axis Label ("HH:MM") and NumberOfVideoTrendingByCountry in y axis
+    DF_NumberOfVideoTrendingInFunctionOfTimeByCountry.plot(x="Label",y=NumberOfVideoTrendingByCountry, kind='bar')
+    
+
+    #title of the plot
+    plot.title("Number of Video Trending in " +Country +" by Week Day")
+
+    #title of the x axis of the plot
+    plot.xlabel('Day of The Week')
+
+    #title of y axis of the plot
+    plot.ylabel('Number of Video Trending')
+
+    #show the graph
+    plot.show()
 
 def ConvertLocalTimeToUTC(df,Country,LocalToUTCTime):
     

@@ -1,0 +1,24 @@
+resample:
+
+year done
+year,month done
+year,month,day done
+year,mont,day,hour done
+year,month,day,hour,minute
+year,month,day,hour,minute,seconde
+
+
+grouby:
+year done
+month done
+day month
+Week day done 
+hour done
+min done
+s done
+
+groupby:
+
+fill temps intermediaire avec zero quand aucune video possté avec option de desactiver ca pour pouvoir comparer a resample le temps d'execution
+
+
