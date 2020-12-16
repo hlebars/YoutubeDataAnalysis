@@ -19,6 +19,36 @@ s done
 
 groupby:
 
-fill temps intermediaire avec zero quand aucune video possté avec option de desactiver ca pour pouvoir comparer a resample le temps d'execution
+fill temps intermediaire avec zero quand aucune video possté avec option de desactiver ca pour pouvoir comparer a resample le temps d'execution 
+
+Creer un graph avec toute les les colonnes sur le meme subplot 
+
+filtrer entre deux dates fait
+
+filtrrer entre deux temps 
+
+modifier la taille des subplot en fonction du nombre de colonnes et modifier les labels des axes de facon plus belle plot.subplot2grid() 111 for axis label 
+
+modifir count
+
+corriger lorsqu'il y a une colonnne comprendre pourquoi les données de l'année 2017 va sur le 2018 et les autres années ne s'affiche pas 
+
+corriger lorsqu'il y a qu'un subplot nrow=1 ncol=1 creer un test if 
+
+Check if title of graph is inside the superior graph and if it is continue to increase hspace subplot 
+
+ATTENTION X0<0.01 avoir ce que cela donne 
+
+A faire intersection entre titre et bbox superieur
+
+
+check every  the condition is remplish before the while loop
+
+enter the while loop
+
+check if the condition is already accomplish if no put the the margin up else put the margin initial margin
+
+# IKEA Gerton & Karlby Desk Staining Project!
+
 
 

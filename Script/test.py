@@ -7,6 +7,99 @@ import matplotlib.pyplot as plot
 
 import pytz
 # @timeit (repeat=3,number=10)
+
+def EclatedSubPlot(SerieAfterGrpBy,ActivatePlotting,ListOfDateAndTime,Abbreviation):
+
+
+    DicoDayOfWeek={
+        "00":('Mon','Monday'), "01":('Tue','Tuesday'), "02":('Wed','Wednesday'), "03":('Thu','Thursday'),
+        "04":('Fri','Friday'), "05":('Sat','Saturday'), "06":('Sun','Sunday')
+        }
+    
+    DicoMonthOfTheYear = {
+                "01":("Jan", "January"),"02":("Feb","February"),"03":("Mar","March"),"04":("Apr","April"),"05":("May","May"),
+                "06":("Jun","June"),"07":("Jul","July"),"08":("Aug","August"),"09":("Sep","September"),"10":("Oct","October"),
+                "11":("Nov","November"),"12":("Dec","December")
+                }
+
+    df_unstack=SerieAfterGrpBy.unstack(level=0)
+
+    nblevels = df_unstack.index.nlevels 
+    
+    
+    if nblevels!=1:
+        for ColumnsName in ListOfDateAndTime:
+
+            ListMultiIndexName=df_unstack.index.names
+
+            if ColumnsName in ListMultiIndexName:
+                level_index=ListMultiIndexName.index(ColumnsName)
+                
+                if Abbreviation==True:
+                    if ColumnsName=="WeekDay":
+                        df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek), level=level_index)
+                    elif ColumnsName=="M":
+                        df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoMonthOfTheYear[x][0],DicoDayOfWeek), level=level_index)
+                elif Abbreviation==False:
+                    if ColumnsName=="WeekDay":
+                        df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek), level=level_index)
+                    elif ColumnsName=="M":
+                        df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoMonthOfTheYear[x][1],DicoDayOfWeek), level=level_index)
+            else:
+
+                if Abbreviation==True:
+                    if ColumnsName=="WeekDay":
+                        df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek)
+                    elif ColumnsName=="M":
+                        df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][0],DicoMonthOfTheYear)
+                elif Abbreviation==False:
+                    if ColumnsName=="WeekDay":
+                        df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek)
+                    elif ColumnsName=="M":
+                        df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][1],DicoMonthOfTheYear)
+
+    else:
+
+        if "WeekDay" in ListOfDateAndTime and "WeekDay"==ListOfDateAndTime[0]:
+            if Abbreviation==True:
+                df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek)
+            else:
+                df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek)
+
+        if "M" in ListOfDateAndTime and "M"==ListOfDateAndTime[0]:
+            if Abbreviation==True:
+                df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][0],DicoMonthOfTheYear)
+            elif Abbreviation==False:
+                df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][1],DicoMonthOfTheYear)
+        
+
+    DicoConfigRowColumsSubPlot={"Y":(4,3),"M":(4,3),"W":(13,4),"D":(8,4),"WeekDay":(4,2),"h":(6,4),"m":(10,6),"s":(10,6)}
+    fig=df_unstack.plot(subplots=True,figsize=(70, 60), layout=DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]],kind="bar",sharex=True,sharey=True,legend=False,)#.flatten()#.map(set_xlabel=("toto"))#**kwargs)
+
+
+    # Add Legend for axis in function of the dimention of the subplot
+    for Row in range(DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]][0]):
+
+        FigRow=fig[Row].flatten()
+
+        if DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]][0]%2!=0 and Row%3==1 and Row!=DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]][0]:
+            FigRow[0].set_ylabel("Nb. Video Trending")
+        elif DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]][0]%2==0 and Row%2==1 and Row!=DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]][0]:
+            FigRow[0].set_ylabel("Nb. Video Trending")  
+        elif DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]][0]==4:
+            FigRow[0].set_ylabel("Nb. Video Trending")
+        
+        for Column in range(len(FigRow)):
+                FigRow[Column].set_xlabel("Time")
+
+    plot.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.2, hspace=0.5)
+    plot.show()
+
+    return df_unstack
+
+
+
+
 def testtemps():
     print(pytz.country_timezones('JP'))
     # Hours=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
@@ -81,7 +174,37 @@ def testtemps():
     # df.plot(kind="bar")
     # plot.show()
 
+    df_grp=df.groupby([df.index.weekday,df.index.hour])
+    ser=df_grp["views"].count()
 
+    # print(df_grp["views"].agg(["count"]))  
+    # print(df_grp["views"].agg(["count"]).loc[1])  
+    # print(df_grp.get_group((1,0)))
+    # df.unstack(level=0).plot(kind='bar', subplots=True)
+    # plot.show()
+    DicoDayOfWeek={
+        "00":('Mon','Monday'), "01":('Tue','Tuesday'), "02":('Wed','Wednesday'), "03":('Thu','Thursday'),
+        "04":('Fri','Friday'), "05":('Sat','Saturday'), "06":('Sun','Sunday')
+        }
+    # ser.index[0][0] = df.index[0][0].map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek)
+    # ser.unstack(level=0).plot(subplots=True, figsize=(70, 60), layout=(4, 2),kind="bar",sharex=True,title=ser.index[0][0] )
+    # plot.show()
+    # for i in range(1,max(df_grp.keys[0])):
+    #     print(df_grp["views"].agg(["count"]).loc[i])
+    #     df_grp.plot(y=df_grp["views"].agg(["count"]).loc[i].count)
+    # plot.show()
+    # fig, ax = plot.subplots(figsize=(10,4))
+    # # ax.plot(df_grp["views"].loc[1], df_grp['views'].count(), label=df_grp["views"].loc[1])
+    # for key, grp in df_grp:#df.groupby(ListOfDateAndTime):
+    #     print(key,grp)
+    #     ax.plot(grp.groupby(grp.index.hour), grp['views'].count(), label=key)
+
+    # ax.legend()
+    # plot.show()
+
+    # df.plot()
+    # plot.show()
+    # plot.show()
     # filt=(df.title.str.find(sub)!=-1)
     # filt=None
     # df_FiltResult=df["title"].resample("D")
@@ -89,6 +212,13 @@ def testtemps():
     # df_FiltResultsample=df["title"][filt].resample("M").count()
     # totalite de la periode 
     
+    DicoMonthOfTheYear = {
+                "01":("Jan", "January"),"02":("Feb","February"),"03":("Mar","March"),"04":("Apr","April"),"05":("May","May"),
+                "06":("Jun","June"),"07":("Jul","July"),"08":("Aug","August"),"09":("Sep","September"),"10":("Oct","October"),
+                "11":("Nov","November"),"12":("Dec","December")
+                }
+
+
     # sub=""
     #fictionnary of group by possibilities
     DicoGroubyPossibility={
@@ -103,10 +233,10 @@ def testtemps():
         "date":df.index.date,
         "WeekDay":df.index.weekday,
         }
-    ListOfDateAndTime=["WeekDay"]#,"h"]#,"M","D"]
-
+    # ListOfDateAndTime=["M","D"]#,"M","D"]
+    ListOfDateAndTime=["WeekDay"]#,"M","D"]
     #test if the list contain more than one parameter for grouby if it is true then it will group by by the composant o the list
-    if len(ListOfDateAndTime)>1:
+    if len(ListOfDateAndTime)==1:
 
         
         
@@ -135,10 +265,165 @@ def testtemps():
 
 
         #grouby in function of the entry in the list of date and time   
-        df=df.groupby(ListOfDateAndTime)["views"].count()
+        # df_grp=df.groupby(ListOfDateAndTime)#["views"].count()
+        Abbreviation=True
+
+
+        df_grp=df.groupby([df.index.weekday,df.index.hour])#["views"].count()
+
+        df=df_grp["views"].count()
+        EclatedSubPlot(df,True,ListOfDateAndTime,Abbreviation)
+
+        
+
+        # Abbreviation=False
+        
+
+        # # fig, (ax1, ax2) = plot.subplots(2, 1)
+        
+        # # df.plot(x='Weekday', y='h', ax=ax1, legend=False)
+        # # df.sort_values().plot(kind='barh', ax=ax2)
+        # ser=df_grp["views"].count()
+        
+
+        
+
+        # df_unstack=ser.unstack(level=0)
+
+        # nblevels = df_unstack.index.nlevels 
+        # print(nblevels)
+        
+        # if nblevels!=1:
+        #     for ColumnsName in ListOfDateAndTime:
+
+        #         ListMultiIndexName=df_unstack.index.names
+
+        #         if ColumnsName in ListMultiIndexName:
+        #             level_index=ListMultiIndexName.index(ColumnsName)
+                    
+        #             if Abbreviation==True:
+        #                 if ColumnsName=="WeekDay":
+        #                     df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek), level=level_index)
+        #                 elif ColumnsName=="M":
+        #                     df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoMonthOfTheYear[x][0],DicoDayOfWeek), level=level_index)
+        #             elif Abbreviation==False:
+        #                 if ColumnsName=="WeekDay":
+        #                     df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek), level=level_index)
+        #                 elif ColumnsName=="M":
+        #                     df_unstack.index = df_unstack.index.set_levels(df_unstack.index.levels[level_index].map(lambda x : DicoMonthOfTheYear[x][1],DicoDayOfWeek), level=level_index)
+        #         else:
+
+        #             if Abbreviation==True:
+        #                 if ColumnsName=="WeekDay":
+        #                     df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek)
+        #                 elif ColumnsName=="M":
+        #                     df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][0],DicoMonthOfTheYear)
+        #             elif Abbreviation==False:
+        #                 if ColumnsName=="WeekDay":
+        #                     df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek)
+        #                 elif ColumnsName=="M":
+        #                     df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][1],DicoMonthOfTheYear)
+
+        # else:
+
+        #     if "WeekDay" in ListOfDateAndTime and "WeekDay"==ListOfDateAndTime[0]:
+        #         if Abbreviation==True:
+        #             df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek)
+        #         else:
+        #             df_unstack.columns = df_unstack.columns.map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek)
+        #     else:
+        #         if Abbreviation==True:
+        #             df_unstack.index = df_unstack.index.map(lambda x : DicoDayOfWeek[x][0],DicoDayOfWeek)
+        #         else:
+        #             df_unstack.index = df_unstack.index.map(lambda x : DicoDayOfWeek[x][1],DicoDayOfWeek)
+
+        #     if "M" in ListOfDateAndTime and "M"==ListOfDateAndTime[0]:
+        #         if Abbreviation==True:
+        #             df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][0],DicoMonthOfTheYear)
+        #         elif Abbreviation==False:
+        #             df_unstack.columns = df_unstack.columns.map(lambda x : DicoMonthOfTheYear[x][1],DicoMonthOfTheYear)
+        #     else:
+        #         if Abbreviation==True:
+        #             df_unstack.index = df_unstack.index.map(lambda x : DicoMonthOfTheYear[x][0],DicoMonthOfTheYear)
+        #         elif Abbreviation==False:
+        #             df_unstack.index = df_unstack.index.map(lambda x : DicoMonthOfTheYear[x][1],DicoMonthOfTheYear)
+        # print(df_unstack.index)
+        # # fig, axes=plot.subplots(nrows=4,ncols=2,)
+        # # axes[0][0].plot(df_unstack)
+        # # plot.show()
+        # # ax.plot(df_unstack)
+        # # fig = plot.figure()  # create a figure object
+        # # axs = fig.subplots(nrows=4,ncols=2)
+        # # fig
+        # # for ax in axs:
+        # #     ax.plot(df_grp[0])
+        #       # create an axes object in the figure
+        # # ax.plot(df_unstack)
+        # # ax.set_ylabel('some numbers')
+        # # plot.figure(1)
+        # # df_unstack.plot()
+        # # fig=plot.figure()
+        # # ax1=fig.add_subplot(df_unstack)
+
+        # DicoConfigRowColumsSubPlot={"Y":(4,3),"M":(4,3),"W":(13,4),"D":(8,4),"WeekDay":(4,2),"h":(6,4),"m":(10,6),"s":(10,6)}
+        # fig=df_unstack.plot(subplots=True,figsize=(70, 60), layout=DicoConfigRowColumsSubPlot[ListOfDateAndTime[0]],kind="bar",sharex=True,sharey=True,legend=False,).flatten()#.map(set_xlabel=("toto"))#**kwargs)
+        # fig=fig.flatten()
+        # # fig.text(0.5, 0.04, 'common xlabel', ha='center', va='center')
+        # # fig.text(0.06, 0.5, 'common ylabel', ha='center', va='center', rotation='vertical')
+        # # fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.2, hspace=0.2)
+        # for i in range(len(fig)):
+            
+        #     fig[i].set_ylabel("Nb. Video Trending")
+        #     fig[i].set_xlabel("Time")
+
+        # plot.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.2, hspace=0.5)
+        # plot.show()
+        
+        # plot.show()
+
+
+        # df_unstack[df_unstack.columns[0]].plot(ax=axes[0,0])
+        # df_unstack[df_unstack.columns[1]].plot(ax=axes[0,1])
+        # plot.show()
+
+        # rowlength = df_grp.ngroups//2
+        # fig, axs = plot.subplots()
+        # df_unstack.plot(subplot=True,layout=(4, 2), figsize=(70, 60),kind="bar",sharex=True,sharey=True,)
+        # fig=df_unstack.plot(subplot=True,ax=ax,kind="bar")
+        #title of the x axis of the plot
+        # ax.set_xlabel('common xlabel')
+        # fig.xlabel('common xlabel')
+        # fig.ylabel('common ylabel')
+        # plot.xlabel("hours")
+
+        #title of y axis of the plot
+        # plot.ylabel("Number Of Video Trending")
+        # plot.(xtitle="hours",ytitle="Number Of Video Trending")
+        # plot.tight_layout()
+        plot.show()
+        # plot.show()
+        # fig, ax = plot.subplots(figsize=(10,4))
+        # for key, grp in df.groupby(ListOfDateAndTime):
+        #     ax.plot(grp['WeekDay'], grp['h'], label=key)
+
+        # ax.legend()
+        # plot.show()
+
 
         #Go from pd series to dataframe with another index
         df=df.to_frame(name = 'Number Of Video Trending').reset_index()
+
+
+        
+        # fig, axs = plot.subplots(2, 1, sharex=True)
+
+        # # gs = df.groupby(["WeekDay","h"], axis=1)
+        # # df.set_index('WeekDay',inplace=True)
+        # gs = df.groupby(["WeekDay"], axis=1)
+        # for (_, g), ax in zip(gs, axs):
+        #     g.plot.bar(stacked=True, ax=ax)
+
+        # plot.show()
         
         if "WeekDay" in ListOfDateAndTime:
             dayOfWeek={"00":'Monday', "01":'Tuesday', "02":'Wednesday', "03":'Thursday', "04":'Friday', "05":'Saturday', "06":'Sunday'}
